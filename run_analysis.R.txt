@@ -1,0 +1,117 @@
+# R code of run_analysis.R for Getting and Cleaning Data Course Assignment
+
+# Before applying the R code, download the zip file, unzip it, and save it into the C drive of your computer. In this case, datasets are saved in "C:/Users/zyang/Documents/DataScienceLin/data".
+
+# ----------------------------------------------------------------------------------------------------
+# Read Supporting explanations of the data incluidng features and activities, which will be stored in variables "featureNames" and "activityLabels".
+
+featureNames <- read.table("C:/Users/zyang/Documents/DataScienceLin/data/features.txt")
+activityLabels <- read.table("C:/Users/zyang/Documents/DataScienceLin/data/activity_labels.txt", header = FALSE)
+
+# Load both training data and test data, including subject, activity, and features. 
+
+# Read training data
+subjectTrain <- read.table("C:/Users/zyang/Documents/DataScienceLin/data/train/subject_train.txt", header = FALSE)
+featuresTrain <- read.table("C:/Users/zyang/Documents/DataScienceLin/data/train/X_train.txt", header = FALSE)
+activityTrain <- read.table("C:/Users/zyang/Documents/DataScienceLin/data/train/y_train.txt", header = FALSE)
+
+# Read test data
+subjectTest <- read.table("C:/Users/zyang/Documents/DataScienceLin/data/test/subject_test.txt", header = FALSE)
+featuresTest <- read.table("C:/Users/zyang/Documents/DataScienceLin/data/test/X_test.txt", header = FALSE)
+activityTest <- read.table("C:/Users/zyang/Documents/DataScienceLin/data/test/y_test.txt", header = FALSE)
+
+# -----------------------------------------------------------------------------------------------------
+
+# STEP 1 - Merge the training and the test sets to create one data set
+# Using cbind (column combine) command to merge the training and test data, and save the results in variables "subject", "activity" and "features".
+
+subject <- rbind(subjectTrain, subjectTest)
+features <- rbind(featuresTrain, featuresTest)
+activity <- rbind(activityTrain, activityTest)
+
+# Put variable names on top of each column
+
+colnames(features) <- t(featureNames[2])
+
+# Merge data of "features" "activitiy" and "subject" together and store in "completeData".
+
+colnames(activity) <- "Activity"
+colnames(subject) <- "Subject"
+completeData <- cbind(features,activity,subject)
+
+# -----------------------------------------------------------------------------------------------------
+
+# STEP 2 - Extracts only the measurements on the mean and standard deviation for each measurement
+
+columnsWithMeanSTD <- grep(".*Mean.*|.*Std.*", names(completeData), ignore.case=TRUE)
+
+# Put "activity" and "subject" and show dimension of the completeDAta
+
+requiredColumns <- c(columnsWithMeanSTD, 562, 563)
+dim(completeData)
+
+# Save needed columns in variale extractedData from the extractedData and examine the dimension
+
+extractedData <- completeData[,requiredColumns]
+dim(extractedData)
+
+# -----------------------------------------------------------------------------------------------------
+
+# STEP 3 - Uses descriptive activity names to name the activities in the data set
+# Using activityLabels from the supporting data, revise numeric to character type in the activity field in extractedData
+
+extractedData$Activity <- as.character(extractedData$Activity)
+for (i in 1:6){
+extractedData$Activity[extractedData$Activity == i] <- as.character(activityLabels[i,2])
+}
+
+# Save activity variable as factor
+
+extractedData$Activity <- as.factor(extractedData$Activity)
+
+# -----------------------------------------------------------------------------------------------------
+
+# STEP 4 - Appropriately labels the data set with descriptive variable names
+# Show variable names in extractedData
+
+names(extractedData)
+
+# After examining the variable names, decide to revise the following acronyms to be more descriptive
+
+# Acc -> Accelerometer
+# Gyro -> Gyroscope
+# BodyBody -> Body
+# Mag -> Magnitude
+# Character f -> Frequency
+# Character t -> Time
+
+names(extractedData)<-gsub("Acc", "Accelerometer", names(extractedData))
+names(extractedData)<-gsub("Gyro", "Gyroscope", names(extractedData))
+names(extractedData)<-gsub("BodyBody", "Body", names(extractedData))
+names(extractedData)<-gsub("Mag", "Magnitude", names(extractedData))
+names(extractedData)<-gsub("^t", "Time", names(extractedData))
+names(extractedData)<-gsub("^f", "Frequency", names(extractedData))
+names(extractedData)<-gsub("tBody", "TimeBody", names(extractedData))
+names(extractedData)<-gsub("-mean()", "Mean", names(extractedData), ignore.case = TRUE)
+names(extractedData)<-gsub("-std()", "STD", names(extractedData), ignore.case = TRUE)
+names(extractedData)<-gsub("-freq()", "Frequency", names(extractedData), ignore.case = TRUE)
+names(extractedData)<-gsub("angle", "Angle", names(extractedData))
+names(extractedData)<-gsub("gravity", "Gravity", names(extractedData))
+
+# Show variable names after revising the variable names
+
+names(extractedData)
+
+# -----------------------------------------------------------------------------------------------------
+
+# STEP 5 - From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject
+# Save Subject as a factor variable
+
+extractedData$Subject <- as.factor(extractedData$Subject)
+extractedData <- data.table(extractedData)
+
+# Creat tidyData set (with average for each activity and subject) and write the dataset into a pre-determined folder
+
+tidyData <- aggregate(. ~Subject + Activity, extractedData, mean)
+tidyData <- tidyData[order(tidyData$Subject,tidyData$Activity),]
+write.table(tidyData, file = "C:/Users/zyang/Documents/DataScienceLin/data/TIDY.txt", row.names = FALSE)
